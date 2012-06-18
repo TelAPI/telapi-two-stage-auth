@@ -148,7 +148,7 @@ LOGGING = {
 
 ###  Settings for this project ###
 
-INSTALLED_APPS += ('two_stage',)
+INSTALLED_APPS += ('two_stage_auth',)
 
 try:
     from local_settings import *

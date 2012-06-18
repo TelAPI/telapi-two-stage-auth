@@ -6,5 +6,5 @@ from django.conf.urls.defaults import patterns, include
 
 urlpatterns = patterns(
     '',
-    (r'^two_stage/', include('two_stage.urls')),
+    (r'^two_stage_auth/', include('two_stage_auth.urls')),
     )

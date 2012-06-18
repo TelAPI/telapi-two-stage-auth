@@ -5,7 +5,7 @@ from django.core.urlresolvers import reverse
 from django.template import RequestContext
 from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render_to_response
-from two_stage import forms
+from two_stage_auth import forms
 from django.conf import settings
 import random
 import hashlib
@@ -22,7 +22,7 @@ def user_page(request):
     page_dict = {}
     if request.session.get('username'):
         page_dict['username'] = request.session.get('username')
-    return render_to_response('two_stage/user.html', page_dict)
+    return render_to_response('two_stage_auth/user.html', page_dict)
 
 
 def logout_page(request):
@@ -44,16 +44,16 @@ def login_page(request):
                 return HttpResponseRedirect(reverse('user_page'))
             else:
                 form = forms.TokenLoginForm(initial={'username': request.session['claimed_username']})
-                return render_to_response('two_stage/login_token.html',
+                return render_to_response('two_stage_auth/login_token.html',
                                           {'form': form},
                                           context_instance=RequestContext(request))
     elif request.session.get('token'):
         form = forms.TokenLoginForm(initial={'username': request.session['claimed_username']})
-        return render_to_response('two_stage/login_token.html',
+        return render_to_response('two_stage_auth/login_token.html',
                                   {'form': form},
                                   context_instance=RequestContext(request))
     form = forms.GenerateTokenForm()
-    return render_to_response('two_stage/generate_token.html',
+    return render_to_response('two_stage_auth/generate_token.html',
                               {'form': form },
                               context_instance=RequestContext(request))
 
@@ -83,7 +83,7 @@ def generate_token(request):
             request.session.save()
             return HttpResponseRedirect(reverse('login'))
     form = forms.GenerateTokenForm()
-    return render_to_response('two_stage/generate_token.html',
+    return render_to_response('two_stage_auth/generate_token.html',
                               {'form': form},
                               context_instance=RequestContext(request))
 
