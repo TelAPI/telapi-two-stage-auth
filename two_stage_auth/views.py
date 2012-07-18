@@ -1,3 +1,4 @@
+import logging
 from django.contrib import auth
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -7,14 +8,15 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render_to_response
 from two_stage_auth import forms
 from django.conf import settings
+from telapi import rest
 import random
 import hashlib
 import time
-import telapi
 # Create your views here.
 ACCOUNT_SID = settings.ACCOUNT_SID
 ACCOUNT_TOKEN = settings.ACCOUNT_TOKEN
 OUTGOING_NUMBER = settings.OUTGOING_NUMBER
+TELAPI_URL = settings.TELAPI_URL
 BASE_URL = settings.CALLBACK_BASE_URL
 
 
@@ -69,15 +71,18 @@ def generate_token(request):
             as_int = int(md5, 16)
             whole_token = '%d' % as_int
             token = int(whole_token[-4:])
-            api = telapi.TelApi(ACCOUNT_SID, ACCOUNT_TOKEN, OUTGOING_NUMBER)
+            client = rest.Client(ACCOUNT_SID, ACCOUNT_TOKEN, TELAPI_URL)
+            account = client.accounts[client.account_sid]
             message = '%s, your temporary token is %04d' % (claimed_username, token)
             if form.cleaned_data['contact_method'] == '1':
-                api.send_sms(form.cleaned_data['phone_number'],
-                             message)
+                account.sms_messages.create(from_number=OUTGOING_NUMBER, to_number=form.cleaned_data['phone_number'],
+                                            body=message)
             else:
-                telml_url = BASE_URL + reverse('telml_call', args=(claimed_username, token))
-                api.send_phone_call(form.cleaned_data['phone_number'],
-                                    telml_url)
+                tok = '%04d' % int(token)
+                tok_as_text = ' '.join(list(tok))
+                telml = '<Response><Say loop="2">%s, your, temporary, token, is, %s</Say></Response>' % (claimed_username, tok_as_text)
+                logging.debug('Token for %s is %s', claimed_username, token)
+                account.calls.create(from_number=OUTGOING_NUMBER, to_number=form.cleaned_data['phone_number'], url=telml)
             request.session['claimed_username'] = claimed_username
             request.session['token'] = '%04d' % token
             request.session.save()
@@ -86,11 +91,3 @@ def generate_token(request):
     return render_to_response('two_stage_auth/generate_token.html',
                               {'form': form},
                               context_instance=RequestContext(request))
-
-
-@csrf_exempt
-def telml_call(request, username, token):
-    tok = '%04d' % int(token)
-    tok_as_text = ' '.join(list(tok))
-    msg = '<Response><Say loop="2">%s, your, temporary, token, is, %s</Say></Response>' % (username, tok_as_text)
-    return HttpResponse(msg, 'application/xml')
